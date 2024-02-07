@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+  --hny-blue: #0278CD;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: url(https://www.honeycomb.io/wp-content/uploads/2022/03/blue_bg_home_2022.svg) no-repeat bottom center;
+  background-size: cover;
+  position: relative;
+}
+
+p {
+  margin-top: 1em; /* adjust as needed */
+  margin-bottom: 1em; /* adjust as needed */
+}
+
+pre, code {
+  overflow-x: auto;
+}
+
+pre {
+  margin-top: 1em; /* adjust as needed */
+  margin-bottom: 1em; /* adjust as needed */
+  padding: 1em;
+  background: #111827;
+  color: white;
+  overflow-x: auto;
+}
+
+button.cta-button {
+  background: var(--hny-blue);
+  border: 2px solid var(--hny-blue);
+  color: #EEE;
+}
+
+button.clear-button {
+  background: #EEE;
+  border: 2px solid var(--hny-blue);
+  color: var(--hny-blue);
+}
+
+.hny-blue {
+  color: var(--hny-blue);
+  background-color: var(--hny-blue);
+}
