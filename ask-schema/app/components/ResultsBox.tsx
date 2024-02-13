@@ -7,6 +7,7 @@ import Loading from './Loading';
 
 interface ResultsBoxProps {
   searchTerm: string;
+  dataset: string;
   onClear: () => void;
 }
 
@@ -36,8 +37,7 @@ const UrlBox: FC<UrlBoxProps> = ({ url }) => {
   );
 };
 
-
-const ResultsBox: FC<ResultsBoxProps> = ({ searchTerm, onClear }) => {
+const ResultsBox: FC<ResultsBoxProps> = ({ searchTerm, dataset, onClear }) => {
   const [result, setResult] = useState<string>('');
   const [urls, setUrls] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -53,7 +53,7 @@ const ResultsBox: FC<ResultsBoxProps> = ({ searchTerm, onClear }) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ input: searchTerm }),
+        body: JSON.stringify({ input: searchTerm, dataset: dataset }),
         signal: abortController.signal,
       });
       const data = await res.json();
@@ -77,7 +77,7 @@ const ResultsBox: FC<ResultsBoxProps> = ({ searchTerm, onClear }) => {
       setLoading(false);
       setIsCancellable(false);
     }
-  }, [searchTerm]);
+  }, [searchTerm, dataset]);
 
   useEffect(() => {
     if (searchTerm) {

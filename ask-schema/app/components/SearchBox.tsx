@@ -1,10 +1,11 @@
 import React, { FC, useState, KeyboardEvent, useRef } from 'react';
 
 interface SearchBoxProps {
-  onSearch: (val: string) => void;
+  onSearch: (input: string, dataset: string) => void;
 }
 
 const SearchBox: FC<SearchBoxProps> = ({ onSearch }) => {
+  const dataset = "frontend";
   const [inputValue, setInputValue] = useState<string>('');
   const [isFocused, setIsFocused] = useState<boolean>(false);
   const suggestionClickedRef = useRef(false);
@@ -13,7 +14,7 @@ const SearchBox: FC<SearchBoxProps> = ({ onSearch }) => {
 
   const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' || (e.key === 'Enter' && (e.metaKey || e.ctrlKey))) {
-      onSearch(inputValue);
+      onSearch(inputValue, dataset);
       setIsFocused(false);
     }
   };
@@ -24,14 +25,14 @@ const SearchBox: FC<SearchBoxProps> = ({ onSearch }) => {
   };
 
   const handleSearchClick = () => {
-    onSearch(inputValue.trim());
+    onSearch(inputValue.trim(), dataset);
     setIsFocused(false);
   };
 
   const handleSuggestionClick = (suggestion: string) => {
     suggestionClickedRef.current = true;
     setInputValue(suggestion);
-    onSearch(suggestion);
+    onSearch(suggestion, dataset);
     setIsFocused(false);
   };
 

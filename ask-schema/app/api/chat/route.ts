@@ -5,55 +5,95 @@ import * as path from 'path';
 import { ChatCompletionMessageParam } from 'openai/resources/index.mjs';
 
 type DataQualityResponse = {
-    data_to_use: {
-        columns: string[];
-        explanation: string;
-    }
-    preferred_data_if_not_exists: {
-        columns: string[];
-        explanation: string;
-    }
+  data_to_use: {
+    columns: string[];
+    explanation: string;
+  }
+  preferred_data_if_not_exists: {
+    columns: string[];
+    explanation: string;
+  }
+};
+
+type HNYAPIColumn = {
+  id: string;
+  key_name: string;
+  hidden: boolean;
+  description: string;
+  type: string;
+  last_written: string;
+  created_at: string;
+  updated_at: string;
 };
 
 const directoryPath = path.join(__dirname, '../../../../../data');
-let columnVectorsIndex: number[][];
-let columns: string[];
 
 const client = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY
 });
 
-fs.readdir(directoryPath, (err, files) => {
-  if (err) {
-    console.error('Could not list the directory.', err);
-    process.exit(1);
+async function getDatasetEmbedding(columns: string[], dataset: string): Promise<number[][]> {
+  let embedding: number[][] = [];
+
+  const files = fs.readdirSync(directoryPath);
+  for (let file of files) {
+    if (file === `${dataset}-embedding.json`) {
+      const data = fs.readFileSync(path.join(directoryPath, file), 'utf8');
+        const jsonData: number[][] = JSON.parse(data);
+        embedding = jsonData;
+      }
   }
 
-  files.forEach((file, _) => {
-    if (path.extname(file) === ".json" && file !== "index.json" && file === "frontend-embedding.json") {
-      fs.readFile(path.join(directoryPath, file), 'utf8', (err, data) => {
-        if (err) {
-          console.error(`Error reading file ${file}`, err);
-          return;
-        }
+  if (embedding.length === 0) {
+    const columnsEmbeddings = await client.embeddings.create({
+      model: "text-embedding-3-small",
+      input: columns,
+    });
 
-        const jsonData: number[][] = JSON.parse(data);
-        columnVectorsIndex = jsonData;
-      });
+    fs.writeFileSync(path.join(directoryPath, `${dataset}-embedding.json`), JSON.stringify(columnsEmbeddings.data));
+  }
+
+  return embedding;
+}
+
+async function getDatasetColumns(dataset: string): Promise<string[]> {
+  let columns: string[] = [];
+
+  const files = fs.readdirSync(directoryPath);
+  for (let file of files) {
+    if (file === `columns-${dataset}.csv`) {
+      const data = fs.readFileSync(path.join(directoryPath, file), 'utf8');
+      columns = data.split(",");
+    }
+  }
+
+  if (columns.length === 0) {
+    const hnyKey = process.env.HNY_API_KEY!; // TODO: Add error handling I guess
+    const response = await fetch(`https://api.honeycomb.io/1/columns/${dataset}?key_name=string`, {
+      headers: {
+        "X-Honeycomb-Team": hnyKey
+      }
+    });
+
+    const fetchedColumns: HNYAPIColumn[] = await response.json();
+    const columnNames: string[] = [];
+    for (let column of fetchedColumns) {
+      columnNames.push(column.key_name);
     }
 
-    if (path.extname(file) === ".csv" && file === "columns-frontend.csv") {
-      fs.readFile(path.join(directoryPath, file), 'utf8', (err, data) => {
-        if (err) {
-          console.error(`Error reading file ${file}`, err);
-          return;
-        }
+    fs.writeFileSync(path.join(directoryPath, `columns-${dataset}.csv`), columnNames.join(","));
+    columns = columnNames;
+  }
+  return columns;
+}
 
-        columns = data.split(",");
-      });
-    }
-  });
-});
+function combineColumnsAndEmbeddings(columns: string[], embeddings: number[][]): Map<string, number[]> {
+  let combined: Map<string, number[]> = new Map();
+  for (let i = 0; i < columns.length; i++) {
+    combined.set(columns[i], embeddings[i]);
+  }
+  return combined;
+}
 
 function cosineSimilarity(vecA: number[], vecB: number[]): number {
   let dotProduct = 0.0;
@@ -65,32 +105,34 @@ function cosineSimilarity(vecA: number[], vecB: number[]): number {
   return dotProduct;
 }
 
-
-function getTopKColumns(userEmbedding: number[], columns: string[], k: number = 50): [string, number][] {
-    let similarities: [string, number][] = [];
-    for (let i = 0; i < columns.length; i++) {
-      let cosineSimilarityScore = cosineSimilarity(userEmbedding, columnVectorsIndex[i]);
-      similarities.push([columns[i], cosineSimilarityScore]);
-    }
-    return similarities.sort((a, b) => b[1] - a[1]).slice(0, k); // Removed the extra parenthesis
+function getTopKColumns(userEmbedding: number[], columnsAndEmbeddingsMap: Map<string, number[]>, k: number = 50): [string, number][] {
+  let similarities: [string, number][] = [];
+  for (let [column, embedding] of columnsAndEmbeddingsMap) {
+    similarities.push([column, cosineSimilarity(userEmbedding, embedding)]);
+  }
+  return similarities.sort((a, b) => b[1] - a[1]).slice(0, k);
 }
 
 function trimMarkdownBacktickAndJsonThing(input: string): string {
-    return input.replace(/`/g, "").replace(/json/g, "").trim();
+  return input.replace(/`/g, "").replace(/json/g, "").trim();
 }
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const nlq = body.input;
+  const dataset = body.dataset;
+
+  const columns = await getDatasetColumns(dataset);
+  const datasetEmbedding = await getDatasetEmbedding(columns, dataset);
+  const columnsAndEmbeddingsMap = combineColumnsAndEmbeddings(columns, datasetEmbedding);
 
   const nlqEmbeddingResponse = await client.embeddings.create({
     model: "text-embedding-3-small",
     input: nlq,
   });
-
   const nlqEmbedding = nlqEmbeddingResponse.data[0].embedding;
 
-  const topColumns = getTopKColumns(nlqEmbedding, columns);
+  const topColumns = getTopKColumns(nlqEmbedding, columnsAndEmbeddingsMap);
 
   const messages: ChatCompletionMessageParam[] = [];
   messages.push({
@@ -134,10 +176,10 @@ export async function POST(req: NextRequest) {
   });
 
   const resp = await client.chat.completions.create({
-    model: "gpt-4-turbo-preview", // gpt-3.5-turbo-0125
+    model: "gpt-3.5-turbo-0125", // "gpt-4-turbo-preview", // gpt-3.5-turbo-0125
     messages: messages,
     temperature: 0.0,
-    response_format: {"type": "json_object"},
+    response_format: { "type": "json_object" },
   });
 
   let responseContent = resp.choices[0].message.content?.trim()
@@ -152,11 +194,11 @@ export async function POST(req: NextRequest) {
   const dataQualityResponse: DataQualityResponse = JSON.parse(responseContent);
 
   let content = "Hey friendo, ";
-  
+
   if (dataQualityResponse.data_to_use.columns.length > 0) {
     content += "\n\nIt looks like you have some columns that could help you out:\n\n"
     for (let column of dataQualityResponse.data_to_use.columns) {
-        content += `\t* ${column}\n`;
+      content += `\t* ${column}\n`;
     }
     content += `\nHere's why:\n\n${dataQualityResponse.data_to_use.explanation}\n\n`;
   } else {
