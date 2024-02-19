@@ -1,13 +1,28 @@
 'use client'
 
-import React, { useState, FC } from 'react';
+import React, { useState, useEffect, FC } from 'react';
 import SearchBox from './components/SearchBox';
 import ResultsBox from './components/ResultsBox';
+import DatasetDropdown from './components/DatasetDropdown';
 
 const Home: FC = () => {
-  const [searchTerm, setSearchTerm] = useState<string>('');
+  const fetchDatasets = async () => {
+    const response = await fetch('/api/hny/', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    const data = await response.json();
+    const datasets = data.datasets;
+    setDatasets(datasets);
+  }
 
-  const handleSearch = (input: string, dataset: string) => {
+  const [datasets, setDatasets] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [selectedDataset, setSelectedDataset] = useState<string>('');
+
+  const handleSearch = (input: string) => {
     setSearchTerm(input);
   };
 
@@ -15,13 +30,25 @@ const Home: FC = () => {
     setSearchTerm('');
   }
 
-  const dataset = "frontend";
+  const handleDatasetChange = (dataset: string) => {
+    console.log(dataset);
+    setSelectedDataset(dataset);
+  };
+
+  useEffect(() => {
+    fetchDatasets();
+  }, [fetchDatasets]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">
-      <h1 className="text-3xl font-bold mb-4 text-white">Honeycomb Schema Search 5000</h1>
+      <div className="flex flex-row justify-center items-center mb-4">
+        <h1 className="text-3xl font-bold text-white">Honeycomb Schema Search 5000</h1>
+        <div className="ml-4">
+          <DatasetDropdown datasets={datasets} onChange={handleDatasetChange} />
+        </div>
+      </div>
       <SearchBox onSearch={handleSearch} />
-      {searchTerm && <ResultsBox searchTerm={searchTerm} dataset={dataset} onClear={handleClear} />}
+      {searchTerm && selectedDataset && <ResultsBox searchTerm={searchTerm} dataset={selectedDataset} onClear={handleClear} />}
     </div>
   );
 }

@@ -35,56 +35,46 @@ const client = new OpenAI({
 async function getDatasetEmbedding(columns: string[], dataset: string): Promise<number[][]> {
   let embedding: number[][] = [];
 
-  const files = fs.readdirSync(directoryPath);
-  for (let file of files) {
-    if (file === `${dataset}-embedding.json`) {
-      const data = fs.readFileSync(path.join(directoryPath, file), 'utf8');
-        const jsonData: number[][] = JSON.parse(data);
-        embedding = jsonData;
-      }
+  const file = `${dataset}-embedding.json`;
+  if (fs.existsSync(path.join(directoryPath, file))) {
+    const data = fs.readFileSync(path.join(directoryPath, file), 'utf8');
+    const embeddingData: number[][] = JSON.parse(data);
+    return embeddingData;
   }
 
-  if (embedding.length === 0) {
-    const columnsEmbeddings = await client.embeddings.create({
-      model: "text-embedding-3-small",
-      input: columns,
-    });
+  const columnsEmbeddings = await client.embeddings.create({
+    model: "text-embedding-3-small",
+    input: columns,
+  });
 
-    fs.writeFileSync(path.join(directoryPath, `${dataset}-embedding.json`), JSON.stringify(columnsEmbeddings.data));
-  }
+  fs.writeFileSync(path.join(directoryPath,file), JSON.stringify(columnsEmbeddings.data));
 
   return embedding;
 }
 
 async function getDatasetColumns(dataset: string): Promise<string[]> {
-  let columns: string[] = [];
-
-  const files = fs.readdirSync(directoryPath);
-  for (let file of files) {
-    if (file === `columns-${dataset}.csv`) {
-      const data = fs.readFileSync(path.join(directoryPath, file), 'utf8');
-      columns = data.split(",");
-    }
+  const file = `columns-${dataset}.csv`;
+  if (fs.existsSync(path.join(directoryPath, file))) {
+    const data = fs.readFileSync(path.join(directoryPath, file), 'utf8');
+    return data.split(",");
   }
 
-  if (columns.length === 0) {
-    const hnyKey = process.env.HNY_API_KEY!; // TODO: Add error handling I guess
-    const response = await fetch(`https://api.honeycomb.io/1/columns/${dataset}?key_name=string`, {
-      headers: {
-        "X-Honeycomb-Team": hnyKey
-      }
-    });
-
-    const fetchedColumns: HNYAPIColumn[] = await response.json();
-    const columnNames: string[] = [];
-    for (let column of fetchedColumns) {
-      columnNames.push(column.key_name);
+  const hnyKey = process.env.HNY_API_KEY!; // TODO: Add error handling I guess
+  const response = await fetch(`https://api.honeycomb.io/1/columns/${dataset}?key_name=string`, {
+    headers: {
+      "X-Honeycomb-Team": hnyKey
     }
+  });
 
-    fs.writeFileSync(path.join(directoryPath, `columns-${dataset}.csv`), columnNames.join(","));
-    columns = columnNames;
+  const fetchedColumns: HNYAPIColumn[] = await response.json();
+  const columnNames: string[] = [];
+  for (let column of fetchedColumns) {
+    columnNames.push(column.key_name);
   }
-  return columns;
+
+  fs.writeFileSync(path.join(directoryPath, `columns-${dataset}.csv`), columnNames.join(","));
+  
+  return columnNames;
 }
 
 function combineColumnsAndEmbeddings(columns: string[], embeddings: number[][]): Map<string, number[]> {

@@ -57,7 +57,6 @@ const ResultsBox: FC<ResultsBoxProps> = ({ searchTerm, dataset, onClear }) => {
         signal: abortController.signal,
       });
       const data = await res.json();
-      console.log(data.urls)
       setUrls(data.urls || []);
 
       // Use remark to convert markdown into HTML string
