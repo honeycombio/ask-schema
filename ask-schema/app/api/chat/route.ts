@@ -34,8 +34,8 @@ const client = new OpenAI({
 
 async function getDatasetEmbedding(columns: string[], dataset: string): Promise<number[][]> {
   let embedding: number[][] = [];
-
   const file = `${dataset}-embedding.json`;
+
   if (fs.existsSync(path.join(directoryPath, file))) {
     const data = fs.readFileSync(path.join(directoryPath, file), 'utf8');
     const embeddingData: number[][] = JSON.parse(data);
@@ -47,7 +47,7 @@ async function getDatasetEmbedding(columns: string[], dataset: string): Promise<
     input: columns,
   });
 
-  fs.writeFileSync(path.join(directoryPath,file), JSON.stringify(columnsEmbeddings.data));
+  fs.writeFileSync(path.join(directoryPath, file), JSON.stringify(columnsEmbeddings.data));
 
   return embedding;
 }
@@ -60,7 +60,8 @@ async function getDatasetColumns(dataset: string): Promise<string[]> {
   }
 
   const hnyKey = process.env.HNY_API_KEY!; // TODO: Add error handling I guess
-  const response = await fetch(`https://api.honeycomb.io/1/columns/${dataset}?key_name=string`, {
+  const url = `https://api.honeycomb.io/1/columns/${dataset}`;
+  const response = await fetch(url, {
     headers: {
       "X-Honeycomb-Team": hnyKey
     }
@@ -73,15 +74,17 @@ async function getDatasetColumns(dataset: string): Promise<string[]> {
   }
 
   fs.writeFileSync(path.join(directoryPath, `columns-${dataset}.csv`), columnNames.join(","));
-  
+
   return columnNames;
 }
 
 function combineColumnsAndEmbeddings(columns: string[], embeddings: number[][]): Map<string, number[]> {
   let combined: Map<string, number[]> = new Map();
+
   for (let i = 0; i < columns.length; i++) {
     combined.set(columns[i], embeddings[i]);
   }
+
   return combined;
 }
 
@@ -97,9 +100,11 @@ function cosineSimilarity(vecA: number[], vecB: number[]): number {
 
 function getTopKColumns(userEmbedding: number[], columnsAndEmbeddingsMap: Map<string, number[]>, k: number = 50): [string, number][] {
   let similarities: [string, number][] = [];
+
   for (let [column, embedding] of columnsAndEmbeddingsMap) {
     similarities.push([column, cosineSimilarity(userEmbedding, embedding)]);
   }
+
   return similarities.sort((a, b) => b[1] - a[1]).slice(0, k);
 }
 
