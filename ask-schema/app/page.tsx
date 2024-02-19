@@ -8,7 +8,6 @@ import DatasetDropdown from './components/DatasetDropdown';
 const Home: FC = () => {
   const fetchDatasets = async () => {
     const response = await fetch('/api/hny/', {
-      method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
@@ -16,6 +15,7 @@ const Home: FC = () => {
     const data = await response.json();
     const datasets = data.datasets;
     setDatasets(datasets);
+    handleDatasetChange(datasets[0]);
   }
 
   const [datasets, setDatasets] = useState<string[]>([]);
@@ -31,7 +31,6 @@ const Home: FC = () => {
   }
 
   const handleDatasetChange = (dataset: string) => {
-    console.log(dataset);
     setSelectedDataset(dataset);
   };
 

@@ -1,10 +1,5 @@
-# Default Community Health Files
+# Ask your schema about your data!
 
-This repository contains default community health files for repositories in the Honeycomb organization and will automatically be picked up if they are not overwritten.
+This application lets you select a Honeycomb dataset schema and ask which parts of it are useful for your input.
 
-More details on this repository structure can be found here: https://docs.github.com/en/github/building-a-strong-community/creating-a-default-community-health-file
-
-# {project-name}
-
-<!-- OSS metadata badge - rename repo link and set status in OSSMETADATA -->
-<!-- [![OSS Lifecycle](https://img.shields.io/osslifecycle/honeycombio/{repo-name})](https://github.com/honeycombio/home/blob/main/honeycomb-oss-lifecycle-and-practices.md) -->
+Additionally, it will suggest new columns that don't exist that it thinks would be even more useful.
