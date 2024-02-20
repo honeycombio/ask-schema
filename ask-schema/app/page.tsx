@@ -12,8 +12,10 @@ const Home: FC = () => {
         'Content-Type': 'application/json',
       },
     });
+
     const data = await response.json();
     const datasets = data.datasets;
+
     setDatasets(datasets);
     handleDatasetChange(datasets[0]);
   }
@@ -36,7 +38,7 @@ const Home: FC = () => {
 
   useEffect(() => {
     fetchDatasets();
-  }, [fetchDatasets]);
+  });
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">

@@ -68,10 +68,7 @@ async function getDatasetColumns(dataset: string): Promise<string[]> {
   });
 
   const fetchedColumns: HNYAPIColumn[] = await response.json();
-  const columnNames: string[] = [];
-  for (let column of fetchedColumns) {
-    columnNames.push(column.key_name);
-  }
+  const columnNames: string[] = fetchedColumns.map(column => column.key_name);
 
   fs.writeFileSync(path.join(directoryPath, `columns-${dataset}.csv`), columnNames.join(","));
 
@@ -171,14 +168,14 @@ export async function POST(req: NextRequest) {
   });
 
   const resp = await client.chat.completions.create({
-    model: "gpt-3.5-turbo-0125", // "gpt-4-turbo-preview", // gpt-3.5-turbo-0125
+    model: "gpt-4-turbo-preview", // "gpt-4-turbo-preview" or "gpt-3.5-turbo-0125"
     messages: messages,
     temperature: 0.0,
     response_format: { "type": "json_object" },
   });
 
   let responseContent = resp.choices[0].message.content?.trim()
-  if (responseContent === undefined) {
+  if (!responseContent) {
     return NextResponse.json({
       content: "I'm sorry, I don't understand. Please try again.",
       urls: [],

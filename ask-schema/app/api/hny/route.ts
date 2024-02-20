@@ -45,11 +45,7 @@ export async function GET(request: NextRequest) {
   });
 
   const data: Dataset[] = await response.json();
-  let datasets = [];
-  for (let dataset of data) {
-    datasets.push(dataset.name);
-  }
-  console.log(datasets)
+  let datasets = data.map((dataset) => dataset.slug);
 
   writeDatasetsToFile(datasets);
 

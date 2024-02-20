@@ -44,7 +44,7 @@ const ResultsBox: FC<ResultsBoxProps> = ({ searchTerm, dataset, onClear }) => {
   const [isCancellable, setIsCancellable] = useState<boolean>(false);
   const abortController = new AbortController();
 
-  const fetchData = useCallback(async () => {
+  const fetchData = async () => {
     setLoading(true);
     setIsCancellable(true);
     try {
@@ -76,14 +76,14 @@ const ResultsBox: FC<ResultsBoxProps> = ({ searchTerm, dataset, onClear }) => {
       setLoading(false);
       setIsCancellable(false);
     }
-  }, [searchTerm, dataset]);
+  };
 
   useEffect(() => {
     if (searchTerm) {
       fetchData();
     }
     return () => abortController.abort();
-  }, [searchTerm, fetchData]);
+  }, [searchTerm]);
 
   return (
     <div className="w-full max-w-2xl mx-auto mt-4 p-4 bg-gray-100">
